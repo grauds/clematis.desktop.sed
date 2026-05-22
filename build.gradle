@@ -1,0 +1,128 @@
+import java.text.SimpleDateFormat
+
+plugins {
+    id 'java'
+    id 'checkstyle'
+}
+
+group = 'org.clematis.desktop'
+version = '1.0.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+def githubEnv = layout.projectDirectory.file('config/build/github.env')
+if (githubEnv.asFile.exists()) {
+    def props = providers.fileContents(githubEnv).asText.map { text ->
+        def p = new Properties()
+        p.load(new StringReader(text))
+        return p
+    }.get()
+    ext.username = props.getProperty('USERNAME')
+    ext.token = props.getProperty('TOKEN')
+} else {
+    ext.username = providers.environmentVariable("USERNAME").getOrNull()
+    ext.token = providers.environmentVariable("TOKEN").getOrNull()
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "GitHubPackages"
+        url = URI.create("https://maven.pkg.github.com/grauds/clematis.desktop")
+        credentials {
+            username = project.ext.username
+            password = project.ext.token
+        }
+    }
+}
+
+dependencies {
+    annotationProcessor "org.projectlombok:lombok:1.18.40"
+    checkstyle "com.puppycrawl.tools:checkstyle:10.9.1"
+
+    compileOnly "org.projectlombok:lombok:1.18.40"
+    compileOnly "org.clematis:core-api:2.0.0-SNAPSHOT"
+    compileOnly "org.clematis:core:2.0.0-SNAPSHOT"
+    compileOnly "org.clematis:ui-api:2.0.0-SNAPSHOT"
+    implementation "org.clematis:kiwi:2.5.0-SNAPSHOT"
+
+    implementation 'com.fifesoft:rsyntaxtextarea:3.3.3'
+    implementation 'com.fifesoft:autocomplete:3.3.1'
+
+    testAnnotationProcessor "org.projectlombok:lombok:1.18.40"
+    testImplementation platform('org.junit:junit-bom:6.0.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+checkstyle {
+    configProperties.configFile = file("${project.rootDir}/config/checkstyle/checkstyle.xml")
+    configProperties.checkstyleSuppressionFile = file("${project.rootDir}/config/checkstyle/suppressions.xml")
+}
+
+tasks.register('checkstyleReport') {
+    doLast {
+        if (file("${project.buildDir}/reports/checkstyle/${project.ext.checkType}.xml").exists()) {
+            ant.xslt(in: "${project.buildDir}/reports/checkstyle/${project.ext.checkType}.xml",
+                    style: "${project.rootDir}/config/checkstyle/checkstyle.xsl",
+                    out: "${project.buildDir}/reports/checkstyle/checkstyle_${project.ext.checkType}.html"
+            )
+        }
+    }
+}
+
+tasks.withType(Checkstyle).tap {
+    configureEach {
+        exclude '**/*Test*'
+    }
+}
+
+
+jar {
+    def buildNumber = System.getenv("GITHUB_RUN_NUMBER") ?: System.getenv("BUILD_NUMBER") ?: "LOCAL"
+    def buildDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").format(new Date())
+    manifest {
+        attributes(
+                'Implementation-Title': project.name,
+                'Implementation-Version': project.version,
+                'Build-Number': buildNumber,
+                'Build-Date': buildDate
+        )
+        attributes([
+                'Build-Number': buildNumber,
+                'Build-Date': buildDate,
+                "PluginTitle": "Clematis Source Editor",
+                "PluginName": jar.archiveBaseName.get(),
+                "PluginDescription": "This plugin has syntax highlighting, live compilation," +
+                        " code completion features which makes it ideal for development of small fragments of code" +
+                        " or for competitive programming trainings.",
+                "PluginLevel": "SYSTEM",
+                "PluginType": "UI",
+                "PluginIcon": "org/clematis/desktop/sed/images/editor.png",
+                "PluginIconBig": "org/clematis/desktop/sed/images/editor_big.png",
+                "PluginDashboard": "/org/clematis/desktop/sed/images/dashboard.png",
+                "PluginSettings":  "/org/clematis/desktop/sed/images/dashboard.png",
+                "PluginVersion": jar.archiveVersion.get(),
+                "PluginHelpURL": "https://github.com/grauds/clematis.desktop.sed/",
+        ], "org.clematis.desktop.sed.WorkspaceScriptView.class")
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.register('deployToPlugins', Copy) {
+    from jar
+    into "${System.getProperty("user.home")}/.jworkspace/shells/"
+}
+
+deployToPlugins.dependsOn(assemble)
+build.finalizedBy deployToPlugins
