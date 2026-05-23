@@ -47,6 +47,9 @@ jobs:
 
       - name: Compile Library Jar
         run: ./gradlew :jar -Pversion=${{ steps.get_version.outputs.version }}
+        env:
+          USERNAME: ${{ github.actor }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Rename and Stage Jar File
         shell: bash
