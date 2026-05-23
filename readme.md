@@ -1,5 +1,7 @@
 # Code Editor Plugin for Clematis Java Workspace
 
+[![Gradle Package](https://github.com/grauds/clematis.desktop.sed/actions/workflows/gradle-publish.yml/badge.svg)](https://github.com/grauds/clematis.desktop.sed/actions/workflows/gradle-publish.yml)
+
 Simple Java live compiling source editor, plugin for Java Desktop, especially useful for 
 offline competitive programming training, preparation for live-coding interviews
 and development of short algorithms for your Java applications.  
