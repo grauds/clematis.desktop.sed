@@ -3,6 +3,7 @@ import java.text.SimpleDateFormat
 plugins {
     id 'java'
     id 'checkstyle'
+    id 'maven-publish'
 }
 
 group = 'org.clematis.desktop'
@@ -126,3 +127,22 @@ tasks.register('deployToPlugins', Copy) {
 
 deployToPlugins.dependsOn(assemble)
 build.finalizedBy deployToPlugins
+
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = "https://maven.pkg.github.com/grauds/clematis.desktop.sed"
+            credentials {
+                username = System.getenv("USERNAME")
+                password = System.getenv("TOKEN")
+            }
+        }
+    }
+    publications {
+        gpr(MavenPublication) {
+            artifactId = 'sed'
+            from(components.java)
+        }
+    }
+}
