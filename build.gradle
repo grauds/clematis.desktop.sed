@@ -104,7 +104,7 @@ jar {
                 "PluginDescription": "This plugin has syntax highlighting, live compilation," +
                         " code completion features which makes it ideal for development of small fragments of code" +
                         " or for competitive programming trainings.",
-                "PluginLevel": "SYSTEM",
+                "PluginLevel": "ANY",
                 "PluginType": "UI",
                 "PluginIcon": "org/clematis/desktop/sed/images/editor.png",
                 "PluginIconBig": "org/clematis/desktop/sed/images/editor_big.png",
