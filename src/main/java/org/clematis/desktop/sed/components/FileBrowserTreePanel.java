@@ -24,6 +24,7 @@ package org.clematis.desktop.sed.components;
    anton.troshin@gmail.com
   ----------------------------------------------------------------------------
 */
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -36,6 +37,7 @@ import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JToolBar;
@@ -48,6 +50,7 @@ import javax.swing.tree.TreeSelectionModel;
 
 import lombok.Getter;
 import lombok.Setter;
+
 
 public class FileBrowserTreePanel extends JPanel {
 
@@ -75,12 +78,24 @@ public class FileBrowserTreePanel extends JPanel {
         tree = new JTree(treeModel);
         tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 
-        // 2. Add an action toolbar to open folders
+        // 2. Add an action toolbar to open folders, refresh, and create directories
         JToolBar toolBar = new JToolBar();
         toolBar.setFloatable(false);
+
         JButton openDirBtn = new JButton("Open Project...");
         openDirBtn.addActionListener(_ -> chooseAndLoadDirectory());
         toolBar.add(openDirBtn);
+        toolBar.addSeparator();
+
+        // New Feature: Refresh Button
+        JButton refreshBtn = new JButton("Refresh");
+        refreshBtn.addActionListener(_ -> refreshTree());
+        toolBar.add(refreshBtn);
+
+        // New Feature: Create New Folder Button
+        JButton newFolderBtn = new JButton("New Folder");
+        newFolderBtn.addActionListener(_ -> createNewFolder());
+        toolBar.add(newFolderBtn);
 
         // 3. Listen for double-clicks on files
         tree.addMouseListener(new MouseAdapter() {
@@ -114,6 +129,79 @@ public class FileBrowserTreePanel extends JPanel {
         if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             currentProjectDirectory = chooser.getSelectedFile();
             loadDirectoryStructure(currentProjectDirectory);
+        }
+    }
+
+    /**
+     * Refreshes the directory structure if a project folder is currently active.
+     */
+    public void refreshTree() {
+        if (currentProjectDirectory != null) {
+            loadDirectoryStructure(currentProjectDirectory);
+        }
+    }
+
+    /**
+     * Context-aware folder creation tool. Spawns a subdirectory relative to
+     * what node item is currently highlighted in your JTree selection map.
+     */
+    @SuppressWarnings("checkstyle:ReturnCount")
+    private void createNewFolder() {
+        if (currentProjectDirectory == null) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Please open a project directory before trying to create a folder.",
+                "No Project",
+                JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        // Determine where to build the folder: start with the base project path
+        File parentDir = currentProjectDirectory;
+        TreePath selectedPath = tree.getSelectionPath();
+
+        if (selectedPath != null) {
+            DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
+            if (selectedNode.getUserObject() instanceof FileNodeWrapper) {
+                File selectedFile = ((FileNodeWrapper) selectedNode.getUserObject()).file();
+                // If it's a folder, build inside it; if it's a file, build in its sibling directory context
+                parentDir = selectedFile.isDirectory() ? selectedFile : selectedFile.getParentFile();
+            }
+        }
+
+        // Prompt the developer for a fresh directory profile folder label
+        String folderName = JOptionPane.showInputDialog(
+            this,
+            "Enter name for the new folder:",
+            "Create New Folder",
+            JOptionPane.PLAIN_MESSAGE
+        );
+        if (folderName == null || folderName.trim().isEmpty()) {
+            return; // Action canceled or empty data sequence string entered
+        }
+
+        File newFolder = new File(parentDir, folderName.trim());
+        if (newFolder.exists()) {
+            JOptionPane.showMessageDialog(
+                this,
+                "A folder or file with that name already exists.",
+                "Creation Error",
+                JOptionPane.ERROR_MESSAGE
+            );
+            return;
+        }
+
+        if (newFolder.mkdirs()) {
+            // Instantly sync visual nodes to disk state changes
+            refreshTree();
+        } else {
+            JOptionPane.showMessageDialog(
+                this,
+                "Failed to create the folder. Check directory disk access permissions.",
+                "IO Error",
+                JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 
@@ -186,3 +274,4 @@ public class FileBrowserTreePanel extends JPanel {
         }
     }
 }
+

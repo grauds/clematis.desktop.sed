@@ -107,8 +107,8 @@ jar {
                 "PluginType": "UI",
                 "PluginIcon": "org/clematis/desktop/sed/images/editor.png",
                 "PluginIconBig": "org/clematis/desktop/sed/images/editor_big.png",
-                "PluginDashboard": "/org/clematis/desktop/sed/images/dashboard.png",
-                "PluginSettings":  "/org/clematis/desktop/sed/images/dashboard.png",
+                "PluginDashboard": "/org/clematis/desktop/sed/images/screenshot.png",
+                "PluginSettings":  "/org/clematis/desktop/sed/images/screenshot.png",
                 "PluginVersion": jar.archiveVersion.get(),
                 "PluginHelpURL": "https://github.com/grauds/clematis.desktop.sed/",
         ], "org.clematis.desktop.sed.WorkspaceScriptView.class")

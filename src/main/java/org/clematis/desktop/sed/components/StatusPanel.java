@@ -24,18 +24,17 @@ package org.clematis.desktop.sed.components;
    anton.troshin@gmail.com
   ----------------------------------------------------------------------------
 */
-import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -43,7 +42,10 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 
+import org.clematis.desktop.sed.ResourceAnchor;
+
 import lombok.Setter;
+
 
 @SuppressWarnings("checkstyle:MagicNumber")
 public class StatusPanel extends JPanel {
@@ -117,36 +119,44 @@ public class StatusPanel extends JPanel {
      * Encapsulated micro-component for drawing the thread runtime ring marker
      */
     private static class ProcessStatusIndicator extends JComponent {
+        // Load images once to keep painting fast
+        private static final ImageIcon ON_ICON = new ImageIcon(
+            Objects.requireNonNull(ResourceAnchor.class.getResource(
+                "/org/clematis/desktop/sed/images/led_green.png"
+            ))
+        );
+        private static final ImageIcon OFF_ICON = new ImageIcon(
+            Objects.requireNonNull(ResourceAnchor.class.getResource(
+                "/org/clematis/desktop/sed/images/led_grey.png"
+            ))
+        );
         private boolean isRunning = false;
 
         ProcessStatusIndicator() {
+            // Match the dimensions of your GIF files if they differ from 30x20
             setPreferredSize(new Dimension(30, 20));
         }
 
         public void setRunning(boolean running) {
-            this.isRunning = running;
-            repaint();
+            if (this.isRunning != running) { // Only repaint if the state actually changes
+                this.isRunning = running;
+                repaint();
+            }
         }
 
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            int diameter = 12;
-            int x = (getWidth() - diameter) / 2;
-            int y = (getHeight() - diameter) / 2;
+            // Select the correct image asset
+            ImageIcon icon = isRunning ? ON_ICON : OFF_ICON;
 
-            if (isRunning) {
-                g2.setColor(new Color(46, 204, 113));
-                g2.fillOval(x, y, diameter, diameter);
-            } else {
-                g2.setColor(Color.GRAY);
-                g2.setStroke(new BasicStroke(1.5f));
-                g2.drawOval(x, y, diameter, diameter);
-            }
-            g2.dispose();
+            // Center the image in the component area
+            int x = (getWidth() - icon.getIconWidth()) / 2;
+            int y = (getHeight() - icon.getIconHeight()) / 2;
+
+            // Draw the image directly
+            icon.paintIcon(this, g, x, y);
         }
     }
 }

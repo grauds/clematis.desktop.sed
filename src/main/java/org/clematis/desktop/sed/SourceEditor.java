@@ -47,7 +47,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
-import javax.swing.JFrame;
+import javax.swing.JInternalFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -55,7 +55,6 @@ import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.text.DefaultEditorKit;
 import javax.tools.Diagnostic;
@@ -211,10 +210,7 @@ public class SourceEditor extends JPanel {
             );
             actionToolBar.add(runBtn);
             actionToolBar.addSeparator();
-
-            JCheckBox toggleCompBox = new JCheckBox(getEditorActions().getAction("toggle_comments"));
-            toggleCompBox.setSelected(true);
-            actionToolBar.add(toggleCompBox);
+            actionToolBar.add(getEditorActions().createToolbarButton("toggle_comments"));
 
             JCheckBox toggleLiveBox = new JCheckBox(getEditorActions().getAction("toggle_live_compilation"));
             toggleLiveBox.setSelected(isLiveCompilationEnabled());
@@ -306,9 +302,16 @@ public class SourceEditor extends JPanel {
     }
 
     public void updateWindowFrameTitle() {
-        Component topLevel = SwingUtilities.getWindowAncestor(this);
-        if (topLevel instanceof JFrame) {
-            ((JFrame) topLevel).setTitle("Source Editor Workspace - " + currentFileName);
+        Component comp = this;
+
+        // Bubble up through the parent containers until we hit a JInternalFrame or null
+        while (comp != null && !(comp instanceof JInternalFrame)) {
+            comp = comp.getParent();
+        }
+
+        // If found, safely cast and update the title
+        if (comp != null) {
+            ((JInternalFrame) comp).setTitle("Source Editor Workspace - " + currentFileName);
         }
     }
 
