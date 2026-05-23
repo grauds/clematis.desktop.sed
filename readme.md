@@ -1,5 +1,9 @@
 # Code Editor Plugin for Clematis Java Workspace
 
+Simple Java live compiling source editor, plugin for Java Desktop, especially useful for 
+offline competitive programming training, preparation for live-coding interviews
+and development of short algorithms for your Java applications.  
+
 <img src="./docs/screenshot.png" alt="workspace_component_life_cycle.png" width="700"/>
 
 ## Key Features
