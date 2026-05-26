@@ -25,15 +25,19 @@ package org.clematis.desktop.sed;
    tysinsh@comail.ru
    ----------------------------------------------------------------------------
 */
+import java.awt.Font;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.swing.ImageIcon;
 
+import com.hyperrealm.kiwi.io.ConfigFile;
 import com.hyperrealm.kiwi.util.ResourceLoader;
 
+import jworkspace.Workspace;
 import jworkspace.config.ServiceLocator;
 import jworkspace.runtime.plugin.WorkspacePluginContext;
 import jworkspace.ui.api.IView;
@@ -48,8 +52,11 @@ public class WorkspaceScriptView extends DefaultCompoundView {
      */
     public static final String CK_FONT_FACE = "font.face",
         CK_FONT_SIZE = "font.size",
-        CK_FONT_STYLE = "font.style",
-        CK_TAB_SIZE = "tab.size";
+        CK_FONT_STYLE = "font.style";
+    /**
+     * Configuration
+     */
+    private final ConfigFile config;
 
     private final SourceEditor workspace = new SourceEditor();
 
@@ -59,6 +66,9 @@ public class WorkspaceScriptView extends DefaultCompoundView {
     public WorkspaceScriptView(WorkspacePluginContext pluginContext) {
         super();
         this.pluginContext = pluginContext;
+        this.config = new ConfigFile(
+            this.pluginContext.getUserDir().resolve("sed.cfg").toFile()
+        );
     }
 
     public void actionPerformed(ActionEvent e) {
@@ -91,6 +101,18 @@ public class WorkspaceScriptView extends DefaultCompoundView {
 
     @Override
     public void load() {
+        try {
+            this.config.load();
+            this.workspace.updateFont(
+                new Font(
+                    this.config.getString(CK_FONT_FACE),
+                    this.config.getInt(CK_FONT_STYLE),
+                    this.config.getInt(CK_FONT_SIZE)
+                )
+            );
+        } catch (IOException e) {
+            // ignore to defaults
+        }
         this.workspace.setWorkingDirectory(
             this.pluginContext.getUserDir().toFile()
         );
@@ -98,7 +120,15 @@ public class WorkspaceScriptView extends DefaultCompoundView {
 
     @Override
     public void save() {
-
+        Font font = this.workspace.getTextArea().getFont();
+        this.config.put(CK_FONT_FACE, font.getFamily());
+        this.config.putInt(CK_FONT_SIZE, font.getSize());
+        this.config.putInt(CK_FONT_STYLE, font.getStyle());
+        try {
+            this.config.store();
+        } catch (IOException e) {
+            // ignore
+        }
     }
 
     @Override
