@@ -162,6 +162,7 @@ public class SourceEditor extends JPanel {
     public void setWorkingDirectory(File workingDirectory) {
         this.workingDirectory = workingDirectory;
         this.getFileChooser().setCurrentDirectory(workingDirectory);
+        this.getFileBrowserTreePanel().setCurrentProjectDirectory(workingDirectory);
         this.getFileBrowserTreePanel().loadDirectoryStructure(workingDirectory);
     }
 
