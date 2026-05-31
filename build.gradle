@@ -48,7 +48,7 @@ dependencies {
     compileOnly "org.clematis:core-api:2.0.0-SNAPSHOT"
     compileOnly "org.clematis:core:2.0.0-SNAPSHOT"
     compileOnly "org.clematis:ui-api:2.0.0-SNAPSHOT"
-    implementation "org.clematis:kiwi:2.5.0-SNAPSHOT"
+    compileOnly "org.clematis:kiwi:2.5.0-SNAPSHOT"
 
     implementation 'com.fifesoft:rsyntaxtextarea:3.3.3'
     implementation 'com.fifesoft:autocomplete:3.3.1'

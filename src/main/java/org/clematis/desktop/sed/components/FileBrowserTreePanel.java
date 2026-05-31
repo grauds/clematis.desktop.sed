@@ -32,6 +32,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import javax.swing.BorderFactory;
@@ -51,34 +52,30 @@ import javax.swing.tree.TreeSelectionModel;
 import lombok.Getter;
 import lombok.Setter;
 
-
 public class FileBrowserTreePanel extends JPanel {
 
-    private final JTree tree;
-    private final DefaultTreeModel treeModel;
-    private final DefaultMutableTreeNode rootNode;
+    @Getter private final JTree tree;
+    @Getter private final DefaultTreeModel treeModel;
+    @Getter private final DefaultMutableTreeNode rootNode;
 
-    @Getter
-    @Setter
-    private File currentProjectDirectory;
-
-    @Getter
-    @Setter
-    private Consumer<File> onFileDoubleClicked;
+    @Getter @Setter private File currentProjectDirectory;
+    @Getter @Setter private Consumer<File> onFileDoubleClicked;
 
     @SuppressWarnings("checkstyle:MagicNumber")
     public FileBrowserTreePanel() {
         setLayout(new BorderLayout());
-        setPreferredSize(new Dimension(220, 0)); // Set a clean default width for the sidebar
+        setPreferredSize(new Dimension(220, 0));
         setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Color.GRAY));
 
-        // 1. Set up a placeholder root node
         rootNode = new DefaultMutableTreeNode("No Project Open");
         treeModel = new DefaultTreeModel(rootNode);
         tree = new JTree(treeModel);
         tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 
-        // 2. Add an action toolbar to open folders, refresh, and create directories
+        // Req 2 & 3: Custom external renderer
+        tree.setCellRenderer(new FileTreeCellRenderer());
+
+        // Setup Toolbar
         JToolBar toolBar = new JToolBar();
         toolBar.setFloatable(false);
 
@@ -87,38 +84,67 @@ public class FileBrowserTreePanel extends JPanel {
         toolBar.add(openDirBtn);
         toolBar.addSeparator();
 
-        // New Feature: Refresh Button
         JButton refreshBtn = new JButton("Refresh");
         refreshBtn.addActionListener(_ -> refreshTree());
         toolBar.add(refreshBtn);
 
-        // New Feature: Create New Folder Button
         JButton newFolderBtn = new JButton("New Folder");
-        newFolderBtn.addActionListener(_ -> createNewFolder());
+        newFolderBtn.addActionListener(_ -> createNewFolder(null));
         toolBar.add(newFolderBtn);
 
-        // 3. Listen for double-clicks on files
+        // Mouse listeners for double-clicks AND the new right-click context menu
+        setupMouseListeners();
+
+        add(toolBar, BorderLayout.NORTH);
+        add(new JScrollPane(tree), BorderLayout.CENTER);
+    }
+
+    @SuppressWarnings("checkstyle:AnonInnerLength")
+    private void setupMouseListeners() {
+
         tree.addMouseListener(new MouseAdapter() {
             @SuppressWarnings("checkstyle:NestedIfDepth")
             @Override
             public void mouseClicked(MouseEvent e) {
+                // Double click behavior
                 if (e.getClickCount() == 2 && getOnFileDoubleClicked() != null) {
                     TreePath path = tree.getPathForLocation(e.getX(), e.getY());
                     if (path != null) {
                         DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-                        if (node.getUserObject() instanceof FileNodeWrapper) {
-                            File file = ((FileNodeWrapper) node.getUserObject()).file();
-                            if (file.isFile()) {
-                                getOnFileDoubleClicked().accept(file);
+                        if (node.getUserObject() instanceof FileNodeWrapper wrapper) {
+                            if (wrapper.file().isFile()) {
+                                getOnFileDoubleClicked().accept(wrapper.file());
                             }
                         }
                     }
                 }
             }
-        });
 
-        add(toolBar, BorderLayout.NORTH);
-        add(new JScrollPane(tree), BorderLayout.CENTER);
+            @Override
+            public void mousePressed(MouseEvent e) {
+                handleContextMenu(e);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                handleContextMenu(e);
+            }
+
+            private void handleContextMenu(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    TreePath path = tree.getPathForLocation(e.getX(), e.getY());
+                    if (path != null) {
+                        // Force tree selection to the right-clicked row
+                        tree.setSelectionPath(path);
+                        DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+
+                        // Instantiate and show the separate popup menu class
+                        FileTreePopupMenu popup = new FileTreePopupMenu(FileBrowserTreePanel.this, node);
+                        popup.show(tree, e.getX(), e.getY());
+                    }
+                }
+            }
+        });
     }
 
     private void chooseAndLoadDirectory() {
@@ -132,45 +158,37 @@ public class FileBrowserTreePanel extends JPanel {
         }
     }
 
-    /**
-     * Refreshes the directory structure if a project folder is currently active.
-     */
     public void refreshTree() {
         if (currentProjectDirectory != null) {
             loadDirectoryStructure(currentProjectDirectory);
         }
     }
 
-    /**
-     * Context-aware folder creation tool. Spawns a subdirectory relative to
-     * what node item is currently highlighted in your JTree selection map.
-     */
-    @SuppressWarnings("checkstyle:ReturnCount")
-    private void createNewFolder() {
+    @SuppressWarnings({"checkstyle:NestedIfDepth", "checkstyle:ReturnCount"})
+    public void createNewFolder(File forcedParentDir) {
         if (currentProjectDirectory == null) {
             JOptionPane.showMessageDialog(
                 this,
-                "Please open a project directory before trying to create a folder.",
+                "Please open a project directory first.",
                 "No Project",
                 JOptionPane.WARNING_MESSAGE
             );
             return;
         }
 
-        // Determine where to build the folder: start with the base project path
-        File parentDir = currentProjectDirectory;
-        TreePath selectedPath = tree.getSelectionPath();
-
-        if (selectedPath != null) {
-            DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
-            if (selectedNode.getUserObject() instanceof FileNodeWrapper) {
-                File selectedFile = ((FileNodeWrapper) selectedNode.getUserObject()).file();
-                // If it's a folder, build inside it; if it's a file, build in its sibling directory context
-                parentDir = selectedFile.isDirectory() ? selectedFile : selectedFile.getParentFile();
+        File parentDir = forcedParentDir;
+        if (parentDir == null) {
+            parentDir = currentProjectDirectory;
+            TreePath selectedPath = tree.getSelectionPath();
+            if (selectedPath != null) {
+                DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
+                if (selectedNode.getUserObject() instanceof FileNodeWrapper wrapper) {
+                    File selectedFile = wrapper.file();
+                    parentDir = selectedFile.isDirectory() ? selectedFile : selectedFile.getParentFile();
+                }
             }
         }
 
-        // Prompt the developer for a fresh directory profile folder label
         String folderName = JOptionPane.showInputDialog(
             this,
             "Enter name for the new folder:",
@@ -178,7 +196,7 @@ public class FileBrowserTreePanel extends JPanel {
             JOptionPane.PLAIN_MESSAGE
         );
         if (folderName == null || folderName.trim().isEmpty()) {
-            return; // Action canceled or empty data sequence string entered
+            return;
         }
 
         File newFolder = new File(parentDir, folderName.trim());
@@ -193,26 +211,23 @@ public class FileBrowserTreePanel extends JPanel {
         }
 
         if (newFolder.mkdirs()) {
-            // Instantly sync visual nodes to disk state changes
             refreshTree();
         } else {
-            JOptionPane.showMessageDialog(
-                this,
-                "Failed to create the folder. Check directory disk access permissions.",
+            JOptionPane.showMessageDialog(this,
+                "Failed to create folder.",
                 "IO Error",
                 JOptionPane.ERROR_MESSAGE
             );
         }
     }
 
-    /**
-     * Rebuilds the visual JTree representation based on the selected target folder.
-     */
     public void loadDirectoryStructure(File rootDir) {
+        // Save state externally using helper class
+        Set<String> expandedPaths = FileTreeStateManager.getExpandedAbsolutePaths(tree, rootNode);
+
         rootNode.removeAllChildren();
         rootNode.setUserObject(new FileNodeWrapper(rootDir, true));
 
-        // Populate node hierarchies asynchronously using a safe worker thread
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
             @Override
             protected Void doInBackground() {
@@ -223,7 +238,8 @@ public class FileBrowserTreePanel extends JPanel {
             @Override
             protected void done() {
                 treeModel.nodeStructureChanged(rootNode);
-                // Auto-expand the root folder for a better user experience
+                // Restore state externally
+                FileTreeStateManager.restoreExpandedPaths(tree, rootNode, expandedPaths);
                 tree.expandPath(new TreePath(rootNode.getPath()));
             }
         };
@@ -248,12 +264,13 @@ public class FileBrowserTreePanel extends JPanel {
         });
 
         for (File file : files) {
-            // Skip hidden system files (like .git or .DS_Store)
             if (file.getName().startsWith(".")) {
                 continue;
             }
 
-            DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(new FileNodeWrapper(file, false));
+            DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(
+                new FileNodeWrapper(file, false)
+            );
             parentNode.add(childNode);
 
             if (file.isDirectory()) {
@@ -261,17 +278,4 @@ public class FileBrowserTreePanel extends JPanel {
             }
         }
     }
-
-    /**
-     * An elegant wrapper that overrides toString() so nodes display crisp filenames
-     * while retaining full access to underlying java.io.File metadata.
-     */
-    record FileNodeWrapper(File file, boolean isRoot) {
-
-        @Override
-        public String toString() {
-            return isRoot ? file.getAbsolutePath() : file.getName();
-        }
-    }
 }
-

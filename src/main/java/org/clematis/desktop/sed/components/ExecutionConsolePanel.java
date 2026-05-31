@@ -99,7 +99,7 @@ public class ExecutionConsolePanel extends JPanel {
     public void runCodePipeline(File currentSourceFile, String codeBuffer) {
         if (currentSourceFile == null) {
             JOptionPane.showMessageDialog(this,
-                "Please Save your file to disk before trying to execute it.",
+                "Please save your file to disk before trying to execute it.",
                 "File Not Saved",
                 JOptionPane.WARNING_MESSAGE
             );
@@ -120,10 +120,13 @@ public class ExecutionConsolePanel extends JPanel {
                 String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
                 ProcessBuilder processBuilder = new ProcessBuilder(javaBin, currentSourceFile.getAbsolutePath());
                 processBuilder.redirectErrorStream(true);
+                publish(javaBin + " " + currentSourceFile.getAbsolutePath());
                 Process process = processBuilder.start();
 
-                try (BufferedWriter stdin = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
-                     BufferedReader stdout = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                try (
+                    BufferedWriter stdin = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
+                    BufferedReader stdout = new BufferedReader(new InputStreamReader(process.getInputStream()))
+                ) {
 
                     if (!rawInputTextLines.isEmpty()) {
                         stdin.write(rawInputTextLines);

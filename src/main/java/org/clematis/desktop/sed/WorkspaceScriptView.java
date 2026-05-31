@@ -36,8 +36,8 @@ import javax.swing.ImageIcon;
 
 import com.hyperrealm.kiwi.io.ConfigFile;
 import com.hyperrealm.kiwi.util.ResourceLoader;
+import com.hyperrealm.kiwi.util.ResourceManager;
 
-import jworkspace.Workspace;
 import jworkspace.config.ServiceLocator;
 import jworkspace.runtime.plugin.WorkspacePluginContext;
 import jworkspace.ui.api.IView;
@@ -134,5 +134,13 @@ public class WorkspaceScriptView extends DefaultCompoundView {
     @Override
     public void reset() {
 
+    }
+
+    public static ResourceManager getResourceManager() {
+        return ResourceManagerHolder.RESOURCE_MANAGER;
+    }
+
+    private static final class ResourceManagerHolder {
+        private static final ResourceManager RESOURCE_MANAGER = new ResourceManager(WorkspaceScriptView.class);
     }
 }
