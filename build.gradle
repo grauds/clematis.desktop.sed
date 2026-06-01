@@ -122,7 +122,7 @@ jar {
 
 tasks.register('deployToPlugins', Copy) {
     from jar
-    into "${System.getProperty("user.home")}/.jworkspace/shells/"
+    into "${System.getProperty("user.home")}/.jworkspace/users/root/shells/"
 }
 
 deployToPlugins.dependsOn(assemble)

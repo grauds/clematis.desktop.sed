@@ -28,6 +28,7 @@ import java.awt.event.ActionEvent;
 
 import javax.swing.AbstractAction;
 import javax.swing.AbstractButton;
+import javax.swing.Action;
 
 import org.clematis.desktop.sed.SourceEditor;
 
@@ -37,8 +38,9 @@ public class ToggleLiveCompilationAction extends AbstractAction {
 
     public ToggleLiveCompilationAction(SourceEditor editor) {
         this.editor = editor;
-        putValue(NAME, "Enable Live Compilation");
+        putValue(NAME, "Live Compilation");
         putValue(ACTION_COMMAND_KEY, "toggle_live_compilation");
+        putValue(Action.SELECTED_KEY, editor.isLiveCompilationEnabled());
     }
 
     @Override

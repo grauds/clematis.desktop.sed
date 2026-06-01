@@ -41,7 +41,10 @@ import java.util.Collections;
 import java.util.Locale;
 
 import javax.swing.AbstractAction;
+import javax.swing.AbstractButton;
+import javax.swing.Action;
 import javax.swing.ActionMap;
+import javax.swing.Icon;
 import javax.swing.InputMap;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -53,6 +56,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
+import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
 import javax.swing.UIManager;
@@ -69,6 +73,7 @@ import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 
 import org.clematis.desktop.sed.actions.EditorActionsCollection;
+import org.clematis.desktop.sed.actions.RunAction;
 import org.clematis.desktop.sed.components.ExecutionConsolePanel;
 import org.clematis.desktop.sed.components.FileBrowserTreePanel;
 import org.clematis.desktop.sed.components.StatusPanel;
@@ -86,6 +91,7 @@ import org.fife.ui.rtextarea.SearchEngine;
 import jworkspace.ui.api.dialog.StackTraceError;
 import lombok.Getter;
 import lombok.Setter;
+
 
 @SuppressWarnings("checkstyle:MagicNumber")
 public class SourceEditor extends JPanel {
@@ -129,6 +135,8 @@ public class SourceEditor extends JPanel {
     private JCheckBox caseCheck;
     private JToolBar searchToolBar;
 
+    private RunAction runStopAction;
+
     @SuppressWarnings("checkstyle:MagicNumber")
     public SourceEditor() {
         setLayout(new BorderLayout());
@@ -157,6 +165,33 @@ public class SourceEditor extends JPanel {
 
         applyKeyboardShortcuts();
         updateFont(new Font("Monospaced", Font.PLAIN, 13));
+    }
+
+    public Action getRunStopAction() {
+        if  (runStopAction == null) {
+            CodeExecutionRunner executionRunner = new CodeExecutionRunner(
+                new CodeExecutionRunner.ExecutionListener() {
+                    @Override
+                    public void onOutputReceived(String text) {
+                        getConsolePanel().append(text);
+                    }
+
+                    @Override
+                    public void onStatusChanged(boolean isRunning) {
+                        statusPanel.setProcessRunning(isRunning);
+                        runStopAction.updateState(isRunning);
+                    }
+                });
+
+            this.runStopAction = new RunAction(
+                this,
+                executionRunner,
+                () -> currentSourceFile,
+                () -> getTextArea().getText(),
+                getConsolePanel().getMultilineInputField()::getText
+            );
+        }
+        return runStopAction;
     }
 
     public void setWorkingDirectory(File workingDirectory) {
@@ -196,7 +231,6 @@ public class SourceEditor extends JPanel {
         if (actionToolBar == null) {
             actionToolBar = new JToolBar();
 
-
             actionToolBar.setFloatable(false);
             actionToolBar.add(getEditorActions().createToolbarButton("new"));
             actionToolBar.add(getEditorActions().createToolbarButton("open"));
@@ -204,21 +238,35 @@ public class SourceEditor extends JPanel {
             actionToolBar.addSeparator();
             actionToolBar.add(getEditorActions().createToolbarButton("font"));
             actionToolBar.addSeparator();
-
-            JButton runBtn = new JButton("Run");
-            runBtn.addActionListener(_ -> getConsolePanel().runCodePipeline(
-                currentSourceFile, getTextArea().getText())
-            );
-            actionToolBar.add(runBtn);
-            actionToolBar.addSeparator();
             actionToolBar.add(getEditorActions().createToolbarButton("toggle_comments"));
-
-            JCheckBox toggleLiveBox = new JCheckBox(getEditorActions().getAction("toggle_live_compilation"));
+            actionToolBar.addSeparator();
+            JCheckBox toggleLiveBox = new JCheckBox(
+                getEditorActions().getAction("toggle_live_compilation")
+            );
             toggleLiveBox.setSelected(isLiveCompilationEnabled());
             actionToolBar.add(toggleLiveBox);
+            actionToolBar.addSeparator();
+            actionToolBar.add(createButtonFromAction(getRunStopAction(), true));
 
         }
         return actionToolBar;
+    }
+
+    public static AbstractButton createButtonFromAction(Action a, boolean showText) {
+        boolean isToggle = a.getValue(Action.SELECTED_KEY) != null;
+        AbstractButton b = isToggle ? new JToggleButton() : new JButton();
+        b.setAction(a);
+        b.setIcon((Icon) a.getValue(Action.SMALL_ICON));
+
+        if (showText) {
+            b.setText((String) a.getValue(Action.NAME));
+        } else {
+            b.setText("");
+        }
+
+        b.setEnabled(a.isEnabled());
+        b.setToolTipText((String) a.getValue(Action.SHORT_DESCRIPTION));
+        return b;
     }
 
     public JToolBar getSearchToolBar() {
@@ -344,7 +392,7 @@ public class SourceEditor extends JPanel {
 
     public ExecutionConsolePanel getConsolePanel() {
         if (consolePanel == null) {
-            consolePanel = new ExecutionConsolePanel(getStatusPanel());
+            consolePanel = new ExecutionConsolePanel();
         }
         return consolePanel;
     }
@@ -361,7 +409,7 @@ public class SourceEditor extends JPanel {
                     this.currentFileName = file.getName();
                     updateWindowFrameTitle();
 
-                    if (liveCompilationEnabled) {
+                    if (isLiveCompilationEnabled()) {
                         getTextArea().forceReparsing(0);
                     }
                 } catch (Exception ex) {
@@ -393,7 +441,7 @@ public class SourceEditor extends JPanel {
             parseResult.clearNotices();
             getStatusPanel().clearDiagnostics();
 
-            if (!liveCompilationEnabled || compiler == null) {
+            if (!isLiveCompilationEnabled() || compiler == null) {
                 getStatusPanel().updateStatusSummary(" Workspace Status: Live Compilation Disabled.");
                 return parseResult;
             }

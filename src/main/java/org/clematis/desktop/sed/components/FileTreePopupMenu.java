@@ -41,7 +41,7 @@ public class FileTreePopupMenu extends JPopupMenu {
 
         File selectedFile = wrapper.file();
 
-        // 1. Context Aware option: Create new folder
+        // Create new folder
         JMenuItem createItem = new JMenuItem("New Folder...");
         createItem.addActionListener(_ -> {
             File targetedParent = selectedFile.isDirectory() ? selectedFile : selectedFile.getParentFile();
@@ -49,7 +49,7 @@ public class FileTreePopupMenu extends JPopupMenu {
         });
         add(createItem);
 
-        // 2. Action Option: Rename File or Directory
+        // Rename File or Directory
         JMenuItem renameItem = new JMenuItem("Rename...");
         renameItem.addActionListener(_ -> {
             String newName = JOptionPane.showInputDialog(
@@ -70,7 +70,7 @@ public class FileTreePopupMenu extends JPopupMenu {
         add(renameItem);
         addSeparator();
 
-        // 3. Action Option: Delete target asset from drive storage arrays
+        // Delete target asset from drive storage arrays
         JMenuItem deleteItem = new JMenuItem("Delete");
         deleteItem.addActionListener(_ -> {
             int confirmation = JOptionPane.showConfirmDialog(
