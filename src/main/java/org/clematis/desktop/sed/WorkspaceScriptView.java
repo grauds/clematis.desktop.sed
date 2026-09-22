@@ -58,7 +58,7 @@ public class WorkspaceScriptView extends DefaultCompoundView {
      */
     private final ConfigFile config;
 
-    private final SourceEditor workspace = new SourceEditor();
+    private final SourceEditor editor = new SourceEditor();
 
     @Getter
     private final WorkspacePluginContext pluginContext;
@@ -73,7 +73,7 @@ public class WorkspaceScriptView extends DefaultCompoundView {
 
     public void actionPerformed(ActionEvent e) {
         Map<String, Object> lparam = new HashMap<>();
-        lparam.put("view", workspace);
+        lparam.put("view", editor);
         lparam.put("display", Boolean.TRUE);
         lparam.put("register", Boolean.TRUE);
         ServiceLocator.getInstance()
@@ -93,7 +93,7 @@ public class WorkspaceScriptView extends DefaultCompoundView {
             new ImageIcon(normal),
             new ImageIcon(hover),
             SHOW,
-            LangResource.getString("message#259")
+            "Clematis Source Editor"
         );
 
         return new CButton[] {bEditor};
@@ -103,7 +103,7 @@ public class WorkspaceScriptView extends DefaultCompoundView {
     public void load() {
         try {
             this.config.load();
-            this.workspace.updateFont(
+            this.editor.updateFont(
                 new Font(
                     this.config.getString(CK_FONT_FACE),
                     this.config.getInt(CK_FONT_STYLE),
@@ -113,14 +113,14 @@ public class WorkspaceScriptView extends DefaultCompoundView {
         } catch (IOException e) {
             // ignore to defaults
         }
-        this.workspace.setWorkingDirectory(
+        this.editor.setWorkingDirectory(
             this.pluginContext.getUserDir().toFile()
         );
     }
 
     @Override
     public void save() {
-        Font font = this.workspace.getTextArea().getFont();
+        Font font = this.editor.getTextArea().getFont();
         this.config.put(CK_FONT_FACE, font.getFamily());
         this.config.putInt(CK_FONT_SIZE, font.getSize());
         this.config.putInt(CK_FONT_STYLE, font.getStyle());
