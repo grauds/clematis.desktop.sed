@@ -8,6 +8,10 @@ and development of short algorithms for your Java applications.
 
 <img src="./docs/screenshot.png" alt="workspace_component_life_cycle.png" width="700"/>
 
+## Clematis Java Workspace
+
+Please visit this [repository](https://github.com/grauds/clematis.desktop) to download a copy of Clematis Java Workspace to work with this plugin.
+
 ## Key Features
 
 * Code Editing: Supported by RSyntaxTextArea with Java syntax highlighting, automatic bracket matching, code folding, block-comment toggling (Ctrl + /), and custom line navigation handlers (Home/End keys snap to line boundaries).
